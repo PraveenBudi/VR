@@ -17,6 +17,18 @@
       <div style="font-size: 1.5rem; margin-top: 10px; border-top: 1px solid #444; padding-top: 5px;">GEAR: <span id="hud-gear" style="color: #FFF; font-weight: bold; font-size: 1.8rem;">P</span></div>
       <div style="font-size: 1.2rem; margin-top: 5px; color: #FFA500;">STEER: <span id="hud-steer" style="color: #FFF;">CENTER</span></div>
     </div>
+    
+    <!-- Explicit Driving Controls Overlay -->
+    <div id="controls-panel" style="position: absolute; top: 20px; left: 20px; z-index: 100; background: rgba(0,0,0,0.7); color: #FFF; padding: 15px; border-radius: 8px; font-family: sans-serif; border-left: 5px solid #00FF00;">
+       <h3 style="margin: 0 0 10px 0; color: #00FF00;">HOW TO DRIVE</h3>
+       <ul style="margin: 0; padding-left: 20px; line-height: 1.5;">
+          <li><b>W / Up Arrow:</b> Accelerate</li>
+          <li><b>S / Down Arrow:</b> Brake / Reverse</li>
+          <li><b>A / D / Left / Right:</b> Steer</li>
+          <li><b>VR Mode:</b> Left Stick to Steer, Right Trigger/Grip to Gas/Brake</li>
+       </ul>
+       <p style="margin: 10px 0 0 0; font-size: 0.9rem; color: #F39C12;">* Caution: Do not crash into buildings or walls!</p>
+    </div>
 
     <!-- HUD Logic -->
     <script>
@@ -33,109 +45,77 @@
         if (e.detail.steering < 0) steerText = `LEFT ${Math.abs(e.detail.steering)}%`;
         else if (e.detail.steering > 0) steerText = `RIGHT ${e.detail.steering}%`;
         document.getElementById('hud-steer').innerText = steerText;
+
+        // Update 3D Interior Dashboard
+        const dashSpeed = document.getElementById('3d-speed');
+        if (dashSpeed) dashSpeed.setAttribute('value', e.detail.speed + ' KM/H');
+        
+        const dashGear = document.getElementById('3d-gear');
+        if (dashGear) dashGear.setAttribute('value', 'GEAR: ' + e.detail.gear);
       });
     </script>
 
     <a-scene background="color: #61baff">
       
+      <a-assets>
+        <!-- The Realistic Ferrari Model -->
+        <a-asset-item id="ferrari" src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@master/examples/models/gltf/ferrari.glb"></a-asset-item>
+      </a-assets>
+
       <!-- Strong Daytime Lighting -->
-      <a-light type="ambient" color="#ffffff" intensity="0.7"></a-light>
-      <a-light type="directional" color="#fffaeb" intensity="0.9" position="-5 10 5" castShadow="true"></a-light>
+      <a-light type="ambient" color="#ffffff" intensity="0.8"></a-light>
+      <a-light type="directional" color="#fffaeb" intensity="1.2" position="-5 15 5" castShadow="true"></a-light>
 
-      <!-- Procedurally generated environment and traffic -->
-      <!-- Adjusted count since we have a fixed small road now -->
-      <a-entity highway-environment="treeCount: 80; buildingCount: 40" traffic-manager="count: 5"></a-entity>
+      <!-- Generate Huge 500m x 500m City Track with physical collision boundaries -->
+      <a-entity city-track-generator></a-entity>
 
-      <!-- Environment: Grass Ground -->
-      <a-plane position="0 -0.01 0" rotation="-90 0 0" width="500" height="500" color="#2E7D32"></a-plane>
-
-      <!-- City Roads (Dr. Driving style 90-degree intersections) -->
-      <!-- Main Street (North / South) -->
-      <a-plane position="0 0 -50" rotation="-90 0 0" width="12" height="150" color="#3a3a3a"></a-plane>
-      <a-plane position="0 0.01 -50" rotation="-90 0 0" width="0.2" height="150" color="#e0e0e0" opacity="0.8"></a-plane>
-      
-      <!-- Cross Street (East) intersection at Z = -80 -->
-      <a-plane position="40 0 -80" rotation="-90 90 0" width="100" height="12" color="#3a3a3a"></a-plane>
-      <!-- Center divider line for cross street -->
-      <a-plane position="40 0.01 -80" rotation="-90 90 0" width="100" height="0.2" color="#e0e0e0" opacity="0.8"></a-plane>
-
-      <!-- Wayfinding Arrows -->
-      <a-entity position="0 2.5 -25" rotation="0 0 0" animation="property: position; dir: alternate; dur: 1000; to: 0 3 -25; loop: true">
-         <a-triangle vertex-a="0 1 0" vertex-b="-1 -1 0" vertex-c="1 -1 0" color="#00FF00" material="emissive: #00FF00; emissiveIntensity: 0.8" opacity="0.8"></a-triangle>
-      </a-entity>
-      
-      <!-- Arrow 2 (Turn Right) -->
-      <a-entity position="0 2.5 -65" rotation="0 0 -90" animation="property: position; dir: alternate; dur: 1000; to: 0 3 -65; loop: true">
-         <a-triangle vertex-a="0 1 0" vertex-b="-1 -1 0" vertex-c="1 -1 0" color="#00FF00" material="emissive: #00FF00; emissiveIntensity: 0.8" opacity="0.8"></a-triangle>
-      </a-entity>
-      
-      <!-- Arrow 3 (Drive Straight down Cross Street) -->
-      <a-entity position="30 2.5 -80" rotation="0 -90 0" animation="property: position; dir: alternate; dur: 1000; to: 30 3 -80; loop: true">
-         <a-triangle vertex-a="0 1 0" vertex-b="-1 -1 0" vertex-c="1 -1 0" color="#00FF00" material="emissive: #00FF00; emissiveIntensity: 0.8" opacity="0.8"></a-triangle>
+      <!-- Wayfinding Arrow pointing forward at start -->
+      <a-entity position="0 2 -20" rotation="0 0 0" animation="property: position; dir: alternate; dur: 1000; to: 0 2.5 -20; loop: true">
+         <a-triangle vertex-a="0 1 0" vertex-b="-1 -1 0" vertex-c="1 -1 0" color="#F1C40F" material="emissive: #F1C40F; emissiveIntensity: 1; blending: additive"></a-triangle>
       </a-entity>
 
-      <!-- Destination Parking Spot -->
-      <a-plane position="70 0.01 -77" rotation="-90 0 0" width="6" height="4" color="#F1C40F" opacity="0.5"></a-plane>
-      <a-text value="PARK HERE" position="70 1.5 -77" rotation="0 -90 0" color="#F1C40F" align="center" scale="2 2 2"></a-text>
-
-      <!-- Player rig simulating a car -->
-      <!-- Cap maxSpeed at 0.75 so max display speed is exactly 150 kmph -->
-      <a-entity id="vehicle" position="-3 1 0" vehicle-physics="vehicleType: car; maxSpeed: 0.75;">
+      <!-- Player rig simulating a realistic car -->
+      <a-entity id="vehicle" position="0 0.5 0" vehicle-physics="vehicleType: car; maxSpeed: 0.75;">
         
-        <!-- Virtual Car Multi-part Model -->
-        <!-- Main Chassis -->
-        <a-box position="0 0.4 0" depth="4.5" width="2.2" height="0.8" color="#C0392B" shadow></a-box>
-        <!-- Cabin / Roof -->
-        <a-box position="0 1.1 0.2" depth="2.2" width="1.8" height="0.7" color="#2C3E50" opacity="0.9"></a-box>
+        <!-- The Realistic Ferrari GLB -->
+        <a-gltf-model src="#ferrari" scale="1.5 1.5 1.5" position="0 -0.5 0" rotation="0 180 0"></a-gltf-model>
         
-        <!-- Windscreen -->
-        <a-plane position="0 1.1 -0.9" rotation="-20 0 0" width="1.7" height="0.7" color="#85C1E9" flat-shading="true"></a-plane>
+        <!-- We keep a fallback hit-box invisible for safety -->
+        <a-box opacity="0" width="2" height="1" depth="4" position="0 0 0"></a-box>
 
-        <!-- Wheels (Front Left, Front Right, Rear Left, Rear Right) -->
-        <a-cylinder position="-1.2 0.2 -1.5" rotation="0 0 90" radius="0.4" height="0.2" color="#111111"></a-cylinder>
-        <a-cylinder position="1.2 0.2 -1.5" rotation="0 0 90" radius="0.4" height="0.2" color="#111111"></a-cylinder>
-        <a-cylinder position="-1.2 0.2 1.5" rotation="0 0 90" radius="0.4" height="0.2" color="#111111"></a-cylinder>
-        <a-cylinder position="1.2 0.2 1.5" rotation="0 0 90" radius="0.4" height="0.2" color="#111111"></a-cylinder>
-
-        <!-- Headlights -->
-        <a-cylinder position="-0.7 0.6 -2.26" rotation="90 0 0" radius="0.15" height="0.05" color="#FFF9C4"></a-cylinder>
-        <a-cylinder position="0.7 0.6 -2.26" rotation="90 0 0" radius="0.15" height="0.05" color="#FFF9C4"></a-cylinder>
-
-        <!-- Taillights -->
-        <a-box position="-0.7 0.6 2.25" depth="0.05" width="0.4" height="0.2" color="#E74C3C"></a-box>
-        <a-box position="0.7 0.6 2.25" depth="0.05" width="0.4" height="0.2" color="#E74C3C"></a-box>
-
-        <!-- Cabin Interior (Dashboard & Instructions HUD) -->
-        <a-entity position="0 0.8 -0.8" rotation="-20 0 0">
-          <!-- Dashboard Panel -->
-          <a-plane width="1.6" height="0.4" color="#1a1a1a" material="shader: flat"></a-plane>
-          
-          <!-- Instructions Text -->
-          <a-text value="CONTROLS:" position="-0.75 0.1 0.01" color="#00FF00" width="2"></a-text>
-          <a-text value="VR: L-Stick=Steer | R-Trigger=Gas | R-Grip=Brake\nPC: W/S/Up/Down=Gas/Brake | A/D/Left/Right=Steer" position="-0.75 -0.05 0.01" color="#FFF" width="1.8" line-height="50"></a-text>
-          
-          <!-- Visual Steering Wheel -->
-          <a-entity position="-0.4 0 0.1" class="steering-wheel">
-            <a-torus radius="0.2" radius-tubular="0.025" color="#111" material="metalness: 0.5; roughness: 0.5"></a-torus>
-            <a-box width="0.38" height="0.04" depth="0.02" color="#444"></a-box>
-            <a-box width="0.04" height="0.38" depth="0.02" color="#444"></a-box>
-          </a-entity>
-        </a-entity>
-
-        <!-- Camera (Driver's Head - positioned inside the cabin behind wheel) -->
-        <a-entity position="-0.4 1.15 -0.1">
+        <!-- Driver Viewpoint Camera (positioned specifically inside the Ferrari driver seat) -->
+        <a-entity position="-0.35 0.9 0.1">
           <a-camera></a-camera>
         </a-entity>
+        
+        <!-- Cabin Interior (Dashboard, Gauges, & Sound System) -->
+        <a-entity position="0 0.8 -0.4" rotation="-20 0 0">
+          <a-plane width="1.6" height="0.4" color="#1a1a1a" material="shader: flat"></a-plane>
+          
+          <!-- Car Sound System (Background Music looping) -->
+          <a-sound src="url(https://assets.mixkit.co/music/preview/mixkit-driving-ambition-32.mp3)" autoplay="true" loop="true" volume="0.3"></a-sound>
 
+          <!-- Instructions Text -->
+          <a-text value="CONTROLS:" position="-0.75 0.1 0.01" color="#00FF00" width="2"></a-text>
+          <a-text value="L-Stick=Steer | R-Trigger=Gas" position="-0.75 -0.05 0.01" color="#FFF" width="1.6" line-height="40"></a-text>
+          
+          <!-- Live Telemetry Gauges inside the car -->
+          <a-text id="3d-speed" value="0 KM/H" position="0.3 0.1 0.01" color="#00FF00" width="3" align="center"></a-text>
+          <a-text id="3d-gear" value="GEAR: P" position="0.3 -0.05 0.01" color="#FFA500" width="2" align="center"></a-text>
+
+          <!-- Visual Steering Wheel -->
+          <a-entity position="-0.35 -0.1 0.1" class="steering-wheel">
+            <a-torus radius="0.18" radius-tubular="0.02" color="#111" material="metalness: 0.8; roughness: 0.2"></a-torus>
+            <a-box width="0.34" height="0.03" depth="0.02" color="#444"></a-box>
+            <a-box width="0.03" height="0.34" depth="0.02" color="#444"></a-box>
+          </a-entity>
+        </a-entity>
+        
         <!-- VR Controllers -->
         <a-entity laser-controls="hand: left" vr-steering></a-entity>
         <a-entity laser-controls="hand: right" vr-pedals></a-entity>
 
       </a-entity>
-
-      <!-- Instructions HUD -->
-      <a-text value="Use WASD/Arrows on Desktop.\nUse Left Thumbstick to steer, Right Trigger to accelerate in VR." 
-              position="-2 3 -5" color="#333" width="6" align="center"></a-text>
 
     </a-scene>
   </body>

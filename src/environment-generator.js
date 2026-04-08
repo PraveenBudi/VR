@@ -1,87 +1,132 @@
 // environment-generator.js
-// Procedurally generates trees, buildings, and simple traffic for the highway scene.
+// Procedurally generates a gigantic City Track Loop with physical boundaries.
 
-AFRAME.registerComponent('highway-environment', {
-  schema: {
-    length: { type: 'number', default: 500 },
-    treeCount: { type: 'number', default: 100 },
-    buildingCount: { type: 'number', default: 40 }
-  },
+window.obstacles = [];
+
+AFRAME.registerComponent('city-track-generator', {
   init: function () {
-    const sceneEl = this.el.sceneEl;
+    const trackSize = 500; // 500m x 500m square loop
+    const roadWidth = 16;
     
-    // Generate Trees
-    for (let i = 0; i < this.data.treeCount; i++) {
-      const zPos = (Math.random() * this.data.length) - (this.data.length / 2); // -250 to 250
-      const isLeft = Math.random() > 0.5;
-      const xPos = isLeft ? (-10 - Math.random() * 30) : (10 + Math.random() * 30);
-      
-      const tree = document.createElement('a-entity');
-      tree.setAttribute('position', `${xPos} 0 ${zPos}`);
-      
-      // Trunk
-      const trunk = document.createElement('a-cylinder');
-      trunk.setAttribute('radius', '0.5');
-      trunk.setAttribute('height', '3');
-      trunk.setAttribute('color', '#5D4037');
-      trunk.setAttribute('position', '0 1.5 0');
-      tree.appendChild(trunk);
-      
-      // Leaves
-      const leaves = document.createElement('a-cone');
-      leaves.setAttribute('radius-bottom', '2');
-      leaves.setAttribute('radius-top', '0');
-      leaves.setAttribute('height', '4');
-      leaves.setAttribute('color', '#2E7D32');
-      leaves.setAttribute('position', '0 4.5 0');
-      tree.appendChild(leaves);
-      
-      this.el.appendChild(tree);
-    }
+    // Add grass
+    let grass = document.createElement('a-plane');
+    grass.setAttribute('rotation', '-90 0 0');
+    grass.setAttribute('width', '2000');
+    grass.setAttribute('height', '2000');
+    grass.setAttribute('color', '#27AE60');
+    grass.setAttribute('material', 'roughness: 1');
+    this.el.appendChild(grass);
 
-    // Generate Buildings
-    for (let i = 0; i < this.data.buildingCount; i++) {
-        const zPos = (Math.random() * this.data.length) - (this.data.length / 2);
-        const isLeft = Math.random() > 0.5;
-        // Place buildings further out than trees
-        const xPos = isLeft ? (-30 - Math.random() * 30) : (30 + Math.random() * 30);
-        
-        const width = 10 + Math.random() * 15;
-        const depth = 10 + Math.random() * 15;
-        const height = 10 + Math.random() * 50; // Random heights
-        
-        const building = document.createElement('a-box');
-        building.setAttribute('position', `${xPos} ${height/2} ${zPos}`);
-        building.setAttribute('width', width);
-        building.setAttribute('height', height);
-        building.setAttribute('depth', depth);
-        
-        // Random grey/blue colors
-        const color = ['#546E7A', '#78909C', '#455A64', '#37474F'][Math.floor(Math.random() * 4)];
-        building.setAttribute('color', color);
-        
-        this.el.appendChild(building);
-    }
-  }
-});
+    // Build South Straight
+    this.createRoadSegment(0, 0, trackSize - 40, roadWidth);
+    // Build North Straight
+    this.createRoadSegment(0, -trackSize, trackSize - 40, roadWidth);
+    // Build West Straight
+    this.createRoadSegment(-trackSize/2, -trackSize/2, roadWidth, trackSize - 40);
+    // Build East Straight
+    this.createRoadSegment(trackSize/2, -trackSize/2, roadWidth, trackSize - 40);
 
-// Component for a moving traffic vehicle
-AFRAME.registerComponent('traffic-vehicle', {
-  schema: {
-    speed: { type: 'number', default: 0.3 }, // Speed along Z axis
-    resetZ: { type: 'number', default: -300 }, // When to disappear
-    startZ: { type: 'number', default: 200 }   // Where to reappear
+    // Build 4 Intersections/Corners (using planes for performance blocky city)
+    this.createRoadSegment(-trackSize/2, 0, roadWidth, roadWidth);
+    this.createRoadSegment(trackSize/2, 0, roadWidth, roadWidth);
+    this.createRoadSegment(-trackSize/2, -trackSize, roadWidth, roadWidth);
+    this.createRoadSegment(trackSize/2, -trackSize, roadWidth, roadWidth);
+
+    // Create solid boundary walls so the user gets blocked if they go off road!
+    this.createCollisionWall(-trackSize/2 + roadWidth/2, -trackSize/2, 1, trackSize); // Inner West
+    this.createCollisionWall(trackSize/2 - roadWidth/2, -trackSize/2, 1, trackSize);  // Inner East
+    this.createCollisionWall(0, -roadWidth/2, trackSize, 1);                          // Inner South
+    this.createCollisionWall(0, -trackSize + roadWidth/2, trackSize, 1);              // Inner North
+
+    this.createCollisionWall(-trackSize/2 - roadWidth/2, -trackSize/2, 1, trackSize); // Outer West
+    this.createCollisionWall(trackSize/2 + roadWidth/2, -trackSize/2, 1, trackSize);  // Outer East
+    this.createCollisionWall(0, roadWidth/2, trackSize, 1);                           // Outer South
+    this.createCollisionWall(0, -trackSize - roadWidth/2, trackSize, 1);              // Outer North
+
+    // Populate City Buildings Randomly
+    this.spawnBuildings(trackSize);
   },
-  tick: function () {
-    const pos = this.el.getAttribute('position');
-    pos.z -= this.data.speed;
-    
-    // Loop back
-    if (pos.z < this.data.resetZ) {
-      pos.z = this.data.startZ + (Math.random() * 50); // slight randomness
-    }
-    
-    this.el.setAttribute('position', pos);
+
+  createRoadSegment: function(x, z, w, d) {
+      let road = document.createElement('a-plane');
+      road.setAttribute('position', `${x} 0.05 ${z}`);
+      road.setAttribute('rotation', '-90 0 0');
+      road.setAttribute('width', w);
+      road.setAttribute('height', d);
+      road.setAttribute('color', '#333333');
+      this.el.appendChild(road);
+
+      // Add center dashed lines if it's a long straight
+      if (w > d) {
+          let line = document.createElement('a-plane');
+          line.setAttribute('position', `${x} 0.06 ${z}`);
+          line.setAttribute('rotation', '-90 0 0');
+          line.setAttribute('width', w);
+          line.setAttribute('height', 0.2);
+          line.setAttribute('color', '#fff');
+          this.el.appendChild(line);
+      } else if (d > w) {
+          let line = document.createElement('a-plane');
+          line.setAttribute('position', `${x} 0.06 ${z}`);
+          line.setAttribute('rotation', '-90 0 0');
+          line.setAttribute('width', 0.2);
+          line.setAttribute('height', d);
+          line.setAttribute('color', '#fff');
+          this.el.appendChild(line);
+      }
+  },
+
+  createCollisionWall: function(x, z, w, d) {
+      let wall = document.createElement('a-box');
+      wall.setAttribute('position', `${x} 2 ${z}`);
+      wall.setAttribute('width', w);
+      wall.setAttribute('height', 4);
+      wall.setAttribute('depth', d);
+      wall.setAttribute('color', '#000');
+      wall.setAttribute('opacity', '0'); // Invisible, just for collision
+      this.el.appendChild(wall);
+
+      // Register boundary to global obstacle list for the vehicle to check
+      window.obstacles.push({
+          minX: x - w/2, maxX: x + w/2,
+          minZ: z - d/2, maxZ: z + d/2
+      });
+  },
+
+  spawnBuildings: function(tSize) {
+      const colors = ['#2C3E50', '#8E44AD', '#2980B9', '#16A085', '#E67E22', '#D35400', '#C0392B', '#BDC3C7', '#7F8C8D'];
+      
+      for(let i=0; i<300; i++) {
+          let bx = (Math.random() * 1000) - 500;
+          let bz = (Math.random() * 1000) - 500;
+
+          // Don't spawn on the road
+          if (Math.abs(bx) > (tSize/2 - 20) && Math.abs(bx) < (tSize/2 + 20)) continue;
+          if (Math.abs(bz) > (tSize/2 - 20) && Math.abs(bz) < (tSize/2 + 20)) continue;
+          if (Math.abs(bz) < 20) continue; // South road
+
+          let bw = 10 + Math.random() * 30;
+          let bd = 10 + Math.random() * 30;
+          let bh = 15 + Math.random() * 150; // Skyscapers
+
+          let bldg = document.createElement('a-box');
+          bldg.setAttribute('position', `${bx} ${bh/2} ${bz}`);
+          bldg.setAttribute('width', bw);
+          bldg.setAttribute('height', bh);
+          bldg.setAttribute('depth', bd);
+          // 80% chance of standard glass/metal color, 20% random
+          let myColor = Math.random() > 0.2 ? ['#afc6d6', '#3b434a', '#859c94'][Math.floor(Math.random()*3)] : colors[Math.floor(Math.random()*colors.length)];
+          bldg.setAttribute('color', myColor);
+          bldg.setAttribute('material', 'metalness: 0.6; roughness: 0.3');
+          
+          this.el.appendChild(bldg);
+
+          // Add to obstacles
+          window.obstacles.push({
+              minX: bx - bw/2, maxX: bx + bw/2,
+              minZ: bz - bd/2, maxZ: bz + bd/2
+          });
+      }
   }
 });
 

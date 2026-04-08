@@ -95,13 +95,39 @@ AFRAME.registerComponent('vehicle-physics', {
          wheel.setAttribute('rotation', `0 0 ${this.steerAngle}`);
     });
 
-    // Apply movement
+    // Apply movement with realistic object collision blocking
     if (this.speed !== 0) {
       let position = this.el.getAttribute('position');
       let angle = THREE.MathUtils.degToRad(rotation.y);
-      position.x += Math.sin(angle) * this.speed;
-      position.z += Math.cos(angle) * this.speed;
-      this.el.setAttribute('position', position);
+      let dx = Math.sin(angle) * this.speed;
+      let dz = Math.cos(angle) * this.speed;
+      
+      let nextX = position.x + dx;
+      let nextZ = position.z + dz;
+
+      // Check collision against all obstacles bounding boxes
+      let isBlocked = false;
+      if (window.obstacles) {
+         for(let i=0; i<window.obstacles.length; i++) {
+            let obs = window.obstacles[i];
+            // Car radius approx 1m
+            if (nextX + 1.2 > obs.minX && nextX - 1.2 < obs.maxX &&
+                nextZ + 2.5 > obs.minZ && nextZ - 2.5 < obs.maxZ) {
+                isBlocked = true;
+                break;
+            }
+         }
+      }
+
+      if (isBlocked) {
+          // Crash! Block car immediately
+          this.speed = 0; 
+          // Do not update position
+      } else {
+          position.x = nextX;
+          position.z = nextZ;
+          this.el.setAttribute('position', position);
+      }
     }
 
     // Dispatch telemetry event for 2D game HUD overlays
