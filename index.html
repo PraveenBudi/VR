@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VR Driving Simulator</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background: #121212; color: #ffffff; display: flex; justify-content: center; align-items: center; height: 100vh; flex-direction: column; }
+        .container { text-align: center; background: #1e1e1e; padding: 40px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #333; }
+        h1 { color: #64ffda; margin-bottom: 30px; }
+        .button-group { display: flex; gap: 20px; justify-content: center; }
+        .btn { padding: 15px 30px; font-size: 1.2rem; cursor: pointer; border: none; border-radius: 8px; font-weight: bold; transition: all 0.3s ease; text-decoration: none; color: white; display: inline-block; }
+        .btn-training { background: #007bff; }
+        .btn-training:hover { background: #0056b3; transform: translateY(-2px); }
+        .btn-test { background: #dc3545; }
+        .btn-test:hover { background: #a71d2a; transform: translateY(-2px); }
+        .info { margin-top: 30px; font-size: 0.9rem; color: #888; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>VR Driving Simulator</h1>
+        <div class="button-group">
+            <a href="scenes/training.html" class="btn btn-training">Training Mode (Free Roam)</a>
+            <a href="scenes/test.html" class="btn btn-test">Driving License Test</a>
+        </div>
+        <p class="info">Works on Desktop & VR Headsets (WebXR).</p>
+    </div>
+</body>
+</html>

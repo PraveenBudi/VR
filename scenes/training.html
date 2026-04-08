@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>VR Driving Simulator - Training Mode</title>
+    <!-- Include A-Frame -->
+    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    <!-- Include Custom scripts -->
+    <script src="../src/vr-scene.js"></script>
+    <script src="../src/vehicle-physics.js"></script>
+    <script src="../src/environment-generator.js"></script>
+  </head>
+  <body>
+    <!-- 2D Game HUD Overlay -->
+    <div id="game-hud" style="position: absolute; bottom: 20px; right: 20px; z-index: 100; background: rgba(0,0,0,0.8); color: #00FF00; padding: 20px 30px; border-radius: 12px; font-family: 'Courier New', Courier, monospace; border: 3px solid #333; text-shadow: 0 0 5px #00FF00;">
+      <div style="font-size: 3rem; font-weight: bold; line-height: 1;"><span id="hud-speed">0</span><span style="font-size: 1.2rem; color: #888; margin-left: 5px;">KM/H</span></div>
+      <div style="font-size: 1.5rem; margin-top: 10px; border-top: 1px solid #444; padding-top: 5px;">GEAR: <span id="hud-gear" style="color: #FFF; font-weight: bold; font-size: 1.8rem;">P</span></div>
+      <div style="font-size: 1.2rem; margin-top: 5px; color: #FFA500;">STEER: <span id="hud-steer" style="color: #FFF;">CENTER</span></div>
+    </div>
+
+    <!-- HUD Logic -->
+    <script>
+      window.addEventListener('vehicle-telemetry', (e) => {
+        document.getElementById('hud-speed').innerText = e.detail.speed;
+        
+        const gearEl = document.getElementById('hud-gear');
+        gearEl.innerText = e.detail.gear;
+        if (e.detail.gear === 'R') gearEl.style.color = '#FF3333';
+        else if (e.detail.gear === 'D') gearEl.style.color = '#33FF33';
+        else gearEl.style.color = '#FFFFFF';
+        
+        let steerText = 'CENTER';
+        if (e.detail.steering < 0) steerText = `LEFT ${Math.abs(e.detail.steering)}%`;
+        else if (e.detail.steering > 0) steerText = `RIGHT ${e.detail.steering}%`;
+        document.getElementById('hud-steer').innerText = steerText;
+      });
+    </script>
+
+    <a-scene background="color: #61baff">
+      
+      <!-- Strong Daytime Lighting -->
+      <a-light type="ambient" color="#ffffff" intensity="0.7"></a-light>
+      <a-light type="directional" color="#fffaeb" intensity="0.9" position="-5 10 5" castShadow="true"></a-light>
+
+      <!-- Procedurally generated environment and traffic -->
+      <!-- Adjusted count since we have a fixed small road now -->
+      <a-entity highway-environment="treeCount: 80; buildingCount: 40" traffic-manager="count: 5"></a-entity>
+
+      <!-- Environment: Grass Ground -->
+      <a-plane position="0 -0.01 0" rotation="-90 0 0" width="500" height="500" color="#2E7D32"></a-plane>
+
+      <!-- City Roads (Dr. Driving style 90-degree intersections) -->
+      <!-- Main Street (North / South) -->
+      <a-plane position="0 0 -50" rotation="-90 0 0" width="12" height="150" color="#3a3a3a"></a-plane>
+      <a-plane position="0 0.01 -50" rotation="-90 0 0" width="0.2" height="150" color="#e0e0e0" opacity="0.8"></a-plane>
+      
+      <!-- Cross Street (East) intersection at Z = -80 -->
+      <a-plane position="40 0 -80" rotation="-90 90 0" width="100" height="12" color="#3a3a3a"></a-plane>
+      <!-- Center divider line for cross street -->
+      <a-plane position="40 0.01 -80" rotation="-90 90 0" width="100" height="0.2" color="#e0e0e0" opacity="0.8"></a-plane>
+
+      <!-- Wayfinding Arrows -->
+      <a-entity position="0 2.5 -25" rotation="0 0 0" animation="property: position; dir: alternate; dur: 1000; to: 0 3 -25; loop: true">
+         <a-triangle vertex-a="0 1 0" vertex-b="-1 -1 0" vertex-c="1 -1 0" color="#00FF00" material="emissive: #00FF00; emissiveIntensity: 0.8" opacity="0.8"></a-triangle>
+      </a-entity>
+      
+      <!-- Arrow 2 (Turn Right) -->
+      <a-entity position="0 2.5 -65" rotation="0 0 -90" animation="property: position; dir: alternate; dur: 1000; to: 0 3 -65; loop: true">
+         <a-triangle vertex-a="0 1 0" vertex-b="-1 -1 0" vertex-c="1 -1 0" color="#00FF00" material="emissive: #00FF00; emissiveIntensity: 0.8" opacity="0.8"></a-triangle>
+      </a-entity>
+      
+      <!-- Arrow 3 (Drive Straight down Cross Street) -->
+      <a-entity position="30 2.5 -80" rotation="0 -90 0" animation="property: position; dir: alternate; dur: 1000; to: 30 3 -80; loop: true">
+         <a-triangle vertex-a="0 1 0" vertex-b="-1 -1 0" vertex-c="1 -1 0" color="#00FF00" material="emissive: #00FF00; emissiveIntensity: 0.8" opacity="0.8"></a-triangle>
+      </a-entity>
+
+      <!-- Destination Parking Spot -->
+      <a-plane position="70 0.01 -77" rotation="-90 0 0" width="6" height="4" color="#F1C40F" opacity="0.5"></a-plane>
+      <a-text value="PARK HERE" position="70 1.5 -77" rotation="0 -90 0" color="#F1C40F" align="center" scale="2 2 2"></a-text>
+
+      <!-- Player rig simulating a car -->
+      <!-- Cap maxSpeed at 0.75 so max display speed is exactly 150 kmph -->
+      <a-entity id="vehicle" position="-3 1 0" vehicle-physics="vehicleType: car; maxSpeed: 0.75;">
+        
+        <!-- Virtual Car Multi-part Model -->
+        <!-- Main Chassis -->
+        <a-box position="0 0.4 0" depth="4.5" width="2.2" height="0.8" color="#C0392B" shadow></a-box>
+        <!-- Cabin / Roof -->
+        <a-box position="0 1.1 0.2" depth="2.2" width="1.8" height="0.7" color="#2C3E50" opacity="0.9"></a-box>
+        
+        <!-- Windscreen -->
+        <a-plane position="0 1.1 -0.9" rotation="-20 0 0" width="1.7" height="0.7" color="#85C1E9" flat-shading="true"></a-plane>
+
+        <!-- Wheels (Front Left, Front Right, Rear Left, Rear Right) -->
+        <a-cylinder position="-1.2 0.2 -1.5" rotation="0 0 90" radius="0.4" height="0.2" color="#111111"></a-cylinder>
+        <a-cylinder position="1.2 0.2 -1.5" rotation="0 0 90" radius="0.4" height="0.2" color="#111111"></a-cylinder>
+        <a-cylinder position="-1.2 0.2 1.5" rotation="0 0 90" radius="0.4" height="0.2" color="#111111"></a-cylinder>
+        <a-cylinder position="1.2 0.2 1.5" rotation="0 0 90" radius="0.4" height="0.2" color="#111111"></a-cylinder>
+
+        <!-- Headlights -->
+        <a-cylinder position="-0.7 0.6 -2.26" rotation="90 0 0" radius="0.15" height="0.05" color="#FFF9C4"></a-cylinder>
+        <a-cylinder position="0.7 0.6 -2.26" rotation="90 0 0" radius="0.15" height="0.05" color="#FFF9C4"></a-cylinder>
+
+        <!-- Taillights -->
+        <a-box position="-0.7 0.6 2.25" depth="0.05" width="0.4" height="0.2" color="#E74C3C"></a-box>
+        <a-box position="0.7 0.6 2.25" depth="0.05" width="0.4" height="0.2" color="#E74C3C"></a-box>
+
+        <!-- Cabin Interior (Dashboard & Instructions HUD) -->
+        <a-entity position="0 0.8 -0.8" rotation="-20 0 0">
+          <!-- Dashboard Panel -->
+          <a-plane width="1.6" height="0.4" color="#1a1a1a" material="shader: flat"></a-plane>
+          
+          <!-- Instructions Text -->
+          <a-text value="CONTROLS:" position="-0.75 0.1 0.01" color="#00FF00" width="2"></a-text>
+          <a-text value="VR: L-Stick=Steer | R-Trigger=Gas | R-Grip=Brake\nPC: W/S/Up/Down=Gas/Brake | A/D/Left/Right=Steer" position="-0.75 -0.05 0.01" color="#FFF" width="1.8" line-height="50"></a-text>
+          
+          <!-- Visual Steering Wheel -->
+          <a-entity position="-0.4 0 0.1" class="steering-wheel">
+            <a-torus radius="0.2" radius-tubular="0.025" color="#111" material="metalness: 0.5; roughness: 0.5"></a-torus>
+            <a-box width="0.38" height="0.04" depth="0.02" color="#444"></a-box>
+            <a-box width="0.04" height="0.38" depth="0.02" color="#444"></a-box>
+          </a-entity>
+        </a-entity>
+
+        <!-- Camera (Driver's Head - positioned inside the cabin behind wheel) -->
+        <a-entity position="-0.4 1.15 -0.1">
+          <a-camera></a-camera>
+        </a-entity>
+
+        <!-- VR Controllers -->
+        <a-entity laser-controls="hand: left" vr-steering></a-entity>
+        <a-entity laser-controls="hand: right" vr-pedals></a-entity>
+
+      </a-entity>
+
+      <!-- Instructions HUD -->
+      <a-text value="Use WASD/Arrows on Desktop.\nUse Left Thumbstick to steer, Right Trigger to accelerate in VR." 
+              position="-2 3 -5" color="#333" width="6" align="center"></a-text>
+
+    </a-scene>
+  </body>
+</html>

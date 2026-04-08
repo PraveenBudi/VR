@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>VR Driving Simulator - License Test</title>
+    <!-- Include A-Frame -->
+    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    <!-- Include Custom Physics, VR Scripts, and Test Logic -->
+    <script src="../src/vr-scene.js"></script>
+    <script src="../src/vehicle-physics.js"></script>
+    <script src="../src/driving-test.js"></script>
+  </head>
+  <body>
+    <!-- 2D Game HUD Overlay -->
+    <div id="game-hud" style="position: absolute; bottom: 20px; right: 20px; z-index: 100; background: rgba(0,0,0,0.8); color: #00FF00; padding: 20px 30px; border-radius: 12px; font-family: 'Courier New', Courier, monospace; border: 3px solid #333; text-shadow: 0 0 5px #00FF00;">
+      <div style="font-size: 3rem; font-weight: bold; line-height: 1;"><span id="hud-speed">0</span><span style="font-size: 1.2rem; color: #888; margin-left: 5px;">KM/H</span></div>
+      <div style="font-size: 1.5rem; margin-top: 10px; border-top: 1px solid #444; padding-top: 5px;">GEAR: <span id="hud-gear" style="color: #FFF; font-weight: bold; font-size: 1.8rem;">P</span></div>
+      <div style="font-size: 1.2rem; margin-top: 5px; color: #FFA500;">STEER: <span id="hud-steer" style="color: #FFF;">CENTER</span></div>
+    </div>
+
+    <!-- HUD Logic -->
+    <script>
+      window.addEventListener('vehicle-telemetry', (e) => {
+        document.getElementById('hud-speed').innerText = e.detail.speed;
+        
+        const gearEl = document.getElementById('hud-gear');
+        gearEl.innerText = e.detail.gear;
+        if (e.detail.gear === 'R') gearEl.style.color = '#FF3333';
+        else if (e.detail.gear === 'D') gearEl.style.color = '#33FF33';
+        else gearEl.style.color = '#FFFFFF';
+        
+        let steerText = 'CENTER';
+        if (e.detail.steering < 0) steerText = `LEFT ${Math.abs(e.detail.steering)}%`;
+        else if (e.detail.steering > 0) steerText = `RIGHT ${e.detail.steering}%`;
+        document.getElementById('hud-steer').innerText = steerText;
+      });
+    </script>
+
+    <a-scene background="color: #6C7A89" driving-test-manager>
+      <!-- HUD / UI for the driver -->
+      <!-- We attach this to the camera so it stays in view -->
+      <a-entity position="0 1.5 0">
+        <a-text id="test-status" value="Initializing Test..." position="-1 0.5 -2" width="4" color="#FFF"></a-text>
+      </a-entity>
+
+      <!-- Environment: Structured Test Track layout -->
+      <!-- Grass Base -->
+      <a-plane position="0 -0.01 0" rotation="-90 0 0" width="200" height="200" color="#27AE60"></a-plane>
+      <a-sky color="#B0BEC5"></a-sky>
+
+      <!-- Main Asphalt Test Area -->
+      <a-plane position="0 0 0" rotation="-90 0 0" width="40" height="150" color="#3a3a3a"></a-plane>
+      
+      <!-- Track mark lines (White boundary) -->
+      <a-plane position="-19 0.01 0" rotation="-90 0 0" width="0.2" height="150" color="#ffffff"></a-plane>
+      <a-plane position="19 0.01 0" rotation="-90 0 0" width="0.2" height="150" color="#ffffff"></a-plane>
+      <a-plane position="0 0.01 75" rotation="-90 0 0" width="38" height="0.2" color="#ffffff"></a-plane>
+      <a-plane position="0 0.01 -75" rotation="-90 0 0" width="38" height="0.2" color="#ffffff"></a-plane>
+
+      <!-- Test Course Elements: Cones -->
+      <!-- Slalom course -->
+      <a-cone position="0 0.5 -10" radius-bottom="0.5" radius-top="0.1" height="1" color="#E67E22" obstacle="penalty: 10; reason: Hit cone at start"></a-cone>
+      <a-cone position="-5 0.5 -25" radius-bottom="0.5" radius-top="0.1" height="1" color="#E67E22" obstacle="penalty: 10; reason: Hit cone in slalom 1"></a-cone>
+      <a-cone position="5 0.5 -40" radius-bottom="0.5" radius-top="0.1" height="1" color="#E67E22" obstacle="penalty: 10; reason: Hit cone in slalom 2"></a-cone>
+      <a-cone position="0 0.5 -55" radius-bottom="0.5" radius-top="0.1" height="1" color="#E67E22" obstacle="penalty: 10; reason: Hit cone in slalom 3"></a-cone>
+
+      <!-- Parking Area Markings -->
+      <a-plane position="13 0.01 -30" rotation="-90 0 0" width="6" height="10" color="#e0e0e0"></a-plane>
+      <!-- Parking spot obstacles (representing parked cars) -->
+      <a-box position="10 0.8 -30" width="1" height="1.5" depth="10" color="#C0392B" obstacle="penalty: 25; reason: Hit parked car (left)"></a-box>
+      <a-box position="16 0.8 -30" width="1" height="1.5" depth="10" color="#C0392B" obstacle="penalty: 25; reason: Hit parked car (right)"></a-box>
+
+      <!-- Player rig simulating a car -->
+      <!-- Slower speed for the test mode -->
+      <a-entity id="vehicle" position="0 1 0" vehicle-physics="vehicleType: car; maxSpeed: 0.6;">
+        
+        <!-- Virtual Car Multi-part Model -->
+        <!-- Main Chassis -->
+        <a-box position="0 0.4 0" depth="4.5" width="2.2" height="0.8" color="#2980B9" shadow></a-box>
+        <!-- Cabin / Roof -->
+        <a-box position="0 1.1 0.2" depth="2.2" width="1.8" height="0.7" color="#2C3E50" opacity="0.9"></a-box>
+        
+        <!-- Windscreen -->
+        <a-plane position="0 1.1 -0.9" rotation="-20 0 0" width="1.7" height="0.7" color="#85C1E9" flat-shading="true"></a-plane>
+
+        <!-- Wheels (Front Left, Front Right, Rear Left, Rear Right) -->
+        <a-cylinder position="-1.2 0.2 -1.5" rotation="0 0 90" radius="0.4" height="0.2" color="#111111"></a-cylinder>
+        <a-cylinder position="1.2 0.2 -1.5" rotation="0 0 90" radius="0.4" height="0.2" color="#111111"></a-cylinder>
+        <a-cylinder position="-1.2 0.2 1.5" rotation="0 0 90" radius="0.4" height="0.2" color="#111111"></a-cylinder>
+        <a-cylinder position="1.2 0.2 1.5" rotation="0 0 90" radius="0.4" height="0.2" color="#111111"></a-cylinder>
+
+        <!-- Headlights -->
+        <a-cylinder position="-0.7 0.6 -2.26" rotation="90 0 0" radius="0.15" height="0.05" color="#FFF9C4"></a-cylinder>
+        <a-cylinder position="0.7 0.6 -2.26" rotation="90 0 0" radius="0.15" height="0.05" color="#FFF9C4"></a-cylinder>
+
+        <!-- Taillights -->
+        <a-box position="-0.7 0.6 2.25" depth="0.05" width="0.4" height="0.2" color="#E74C3C"></a-box>
+        <a-box position="0.7 0.6 2.25" depth="0.05" width="0.4" height="0.2" color="#E74C3C"></a-box>
+
+        <!-- Cabin Interior (Dashboard & Instructions HUD) -->
+        <a-entity position="0 0.8 -0.8" rotation="-20 0 0">
+          <!-- Dashboard Panel -->
+          <a-plane width="1.6" height="0.4" color="#1a1a1a" material="shader: flat"></a-plane>
+          
+          <!-- Instructions Text -->
+          <a-text value="CONTROLS:" position="-0.75 0.1 0.01" color="#00FF00" width="2"></a-text>
+          <a-text value="VR: L-Stick=Steer | R-Trigger=Gas | R-Grip=Brake\nPC: W/S/Up/Down=Gas/Brake | A/D/Left/Right=Steer" position="-0.75 -0.05 0.01" color="#FFF" width="1.8" line-height="50"></a-text>
+          
+          <!-- Visual Steering Wheel -->
+          <a-entity position="-0.4 0 0.1" class="steering-wheel">
+            <a-torus radius="0.2" radius-tubular="0.025" color="#111" material="metalness: 0.5; roughness: 0.5"></a-torus>
+            <a-box width="0.38" height="0.04" depth="0.02" color="#444"></a-box>
+            <a-box width="0.04" height="0.38" depth="0.02" color="#444"></a-box>
+          </a-entity>
+        </a-entity>
+
+        <!-- Camera (Driver's Head - positioned inside the cabin behind wheel) -->
+        <a-entity position="-0.4 1.15 -0.1">
+          <a-camera></a-camera>
+        </a-entity>
+
+        <!-- VR Controllers -->
+        <a-entity laser-controls="hand: left" vr-steering></a-entity>
+        <a-entity laser-controls="hand: right" vr-pedals></a-entity>
+
+      </a-entity>
+
+    </a-scene>
+  </body>
+</html>
